@@ -7,3 +7,6 @@ opencv-python
 numpy
 timm==0.9.2  # Compatible version
 efficientnet-pytorch
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib

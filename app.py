@@ -123,13 +123,54 @@ def draw_lines_on_image(orig_img, pred_indices):
 def main():
     st.set_page_config(page_title="Court Line Segmentation", page_icon="🏀", layout="wide")
 
+    # --- Sidebar for Future Work ---
+    with st.sidebar:
+        st.title("📝 Future Work & Project Roadmap")
+        st.markdown("""
+        This project demonstrates a proof-of-concept for basketball court line segmentation. The following enhancements are planned to improve its robustness and utility:
+        """)
+        
+        st.subheader("Model & Training Improvements")
+        st.markdown("""
+        - **Upgrade Dataset:** Train the model using more diverse angles, lighting conditions, and court types to make it more robust and accurate.
+        - **Advanced Augmentation:** Implement a more aggressive data augmentation pipeline (e.g., elastic transforms, cutout) to improve generalization.
+        - **Explore Architectures:** Experiment with different model backbones (e.g., EfficientNet) or more advanced models like DeepLabV3+.
+        - **Hyperparameter Tuning:** Systematically tune hyperparameters like learning rate, optimizer, and loss functions (e.g., Dice Loss, Focal Loss) for optimal performance.
+        """)
+
+        st.subheader("Application & Deployment")
+        st.markdown("""
+        - **Video Integration:** Upgrade the model to be used on videos, demonstrating how lines can be accurately drawn and classified during the broadcast of an actual basketball game.
+        - **Real-Time Optimization:** Optimize the model for real-time inference using techniques like model quantization (e.g., with TensorRT) for smooth performance on live video.
+        - **Post-Processing:** Add post-processing steps (e.g., morphological operations) to clean up predicted masks and create smoother, more consistent lines.
+        """)
+
+    # --- Main Application Area ---
     st.title("🏀 Basketball Court Line Segmentation")
+
+    # --- NEW: Image Recommendations & Instructions ---
+    st.markdown("### Instructions")
+    st.info(
+        """
+        Upload a photo from one of the two angles below, as these are the angles the model was trained on. 
+        The model was created to mainly work on the **Broadcaster Angle** for its potential use in real-world production.
+        """
+    )
+
+    col1, col2 = st.columns(2)
+    with col1:
+        # IMPORTANT: Replace "broadcaster_angle.jpg" with the actual path to your image
+        st.image("Block_by_Alexandre_Sarr_2025_01_08T00_35_28.jpg", caption="Broadcaster Angle")
+    with col2:
+        # IMPORTANT: Replace "floor_plan_angle.jpg" with the actual path to your image
+        st.image("flickr_NBA_1183.jpg", caption="Floor Plan Angle")
+
     st.markdown("""
-    ### Instructions
-    1. Upload a basketball court image.
+    1. Upload a basketball court image using the uploader below.
     2. Click **Detect Court Lines** to run segmentation.
-    3. View the segmentation map and overlay results below.
+    3. View the segmentation map and overlay results.
     """)
+    # --- END of new section ---
 
     uploaded_file = st.file_uploader("Upload Court Image", type=["jpg", "jpeg", "png"])
 
@@ -149,10 +190,10 @@ def main():
                 pred_indices = postprocess_prediction(pred_mask_logits, orig_img.shape[:2])
                 color_mask, result_img = draw_lines_on_image(orig_img, pred_indices)
 
-                col1, col2 = st.columns(2)
-                with col1:
+                res_col1, res_col2 = st.columns(2)
+                with res_col1:
                     st.image(color_mask, caption="Predicted Segmentation Map", use_container_width=True)
-                with col2:
+                with res_col2:
                     st.image(result_img, caption="Lines Overlay", use_container_width=True)
 
                 st.subheader("Legend")

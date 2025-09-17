@@ -3,9 +3,12 @@ import torch
 import numpy as np
 import cv2
 from PIL import Image
-import requests
 import os
 import segmentation_models_pytorch as smp
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseDownload
+import io
 
 # Set device
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -21,20 +24,45 @@ def create_model():
         classes=NUM_CLASSES,
     )
 
-# Download model if not available
 @st.cache_resource
 def load_model_from_drive():
-    model_path = "best_model.pth"
-    if not os.path.exists(model_path):
-        st.info("Downloading model weights... please wait ⏳")
-        url = "https://drive.google.com/uc?export=download&id=1-La0m6zC-xbwi2MhayGihenDzg0Qew3w"
-        r = requests.get(url)
-        with open(model_path, "wb") as f:
-            f.write(r.content)
+    model_path = "best_model_epoch89.pth"
 
-    model = create_model()
-    model.load_state_dict(torch.load(model_path, map_location=DEVICE))
-    model.to(DEVICE)
+    # ✅ Load credentials
+    if os.path.exists("storage-472322-7676a7fe102c.json"):
+        creds = service_account.Credentials.from_service_account_file(
+            "storage-472322-7676a7fe102c.json"
+        )
+    elif "gcp_service_account" in st.secrets:
+        creds = service_account.Credentials.from_service_account_info(
+            st.secrets["gcp_service_account"]
+        )
+    else:
+        raise RuntimeError("❌ No Google Drive credentials found!")
+
+    # ✅ Connect to Google Drive API
+    drive_service = build("drive", "v3", credentials=creds)
+
+    # 🔍 Your model’s file ID (ensure this is the ID of the file, not the folder)
+    file_id = "1-La0m6zC-xbwi2MhayGihenDzg0Qew3w" # Make sure this is the correct file ID
+
+    # ✅ Download model if missing
+    if not os.path.exists(model_path):
+        request = drive_service.files().get_media(fileId=file_id)
+        
+        # Use a 'with' statement to handle the file stream
+        with io.FileIO(model_path, "wb") as fh:
+            downloader = MediaIoBaseDownload(fh, request)
+            done = False
+            while not done:
+                status, done = downloader.next_chunk()
+                if status:
+                    print(f"Download progress: {int(status.progress() * 100)}%")
+
+    # ✅ Load PyTorch model
+    # Now this will read a complete and properly saved file
+    model = create_model() # Create an instance of the model first
+    model.load_state_dict(torch.load(model_path, map_location=torch.device("cpu")))
     model.eval()
     return model
 
